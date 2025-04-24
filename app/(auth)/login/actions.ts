@@ -34,6 +34,6 @@ export async function login(previousState: LoginState, formData: FormData) {
 
   return {
     success: true,
-    message: "Email enviado com sucesso",
+    message: "Email sent successfully",
   };
 }

@@ -29,7 +29,7 @@ export default function LoginForm() {
       <CardHeader>
         <CardTitle className="text-2xl">Login</CardTitle>
         <CardDescription className="py-2">
-          Digite o seu email para receber um link de login
+          Enter your email address to receive a login link{" "}
         </CardDescription>
         <CardContent>
           <form action={formAction}>
@@ -40,33 +40,32 @@ export default function LoginForm() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="Digite seu email"
+                  placeholder="Enter your email"
                   required
                 />
               </div>
               {state.success === true && (
                 <Alert className="text-muted-foreground">
                   <MailCheck className="h-4 w-4 text-green-600!" />
-                  <AlertTitle>Email enviado!</AlertTitle>
+                  <AlertTitle>Email sent!</AlertTitle>
                   <AlertDescription>
-                    Verifique sua caixa de entrada e clique no link para fazer
-                    login.
+                    Check your inbox and click the link to log in.
                   </AlertDescription>
                 </Alert>
               )}
               {state.success === false && (
                 <Alert className="text-muted-foreground">
                   <Siren className="h-4 w-4 text-red-600!" />
-                  <AlertTitle>Erro ao enviar email!</AlertTitle>
+                  <AlertTitle>Email sending error!</AlertTitle>
                   <AlertDescription>
-                    Não foi possível enviar o link de login. Verifique o email
-                    digitado e tente novamente.
+                    Unable to send the login link. Please check the email
+                    entered and try again.
                   </AlertDescription>
                 </Alert>
               )}
-              <Button type="submit" className="w-full">
+              <Button className="w-full cursor-pointer">
                 {pending && <Loader className="animate-spin" />}
-                Enviar link de login
+                Send login link
               </Button>
             </div>
           </form>
