@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { Resend } from "resend";
 
 export type CreateGroupState = {
   success: boolean | null;
@@ -15,9 +16,9 @@ export async function createGroup(
   console.log(previousState); // Ensure previousState is used
   const supabase = await createClient();
 
-  const { data: authUser, error: authError } = await supabase.auth.getUser();
+  const { data: authUser, error: errorAuth } = await supabase.auth.getUser();
 
-  if (authError) {
+  if (errorAuth) {
     return {
       success: false,
       message: "An error occurred while creating the group",
@@ -28,7 +29,7 @@ export async function createGroup(
   const emails = formData.getAll("email");
   const groupName = formData.get("group-name");
 
-  const { data: newGroup, error: groupError } = await supabase
+  const { data: newGroup, error: errorGroup } = await supabase
     .from("groups")
     .insert({
       name: groupName,
@@ -37,7 +38,7 @@ export async function createGroup(
     .select()
     .single();
 
-  if (groupError) {
+  if (errorGroup) {
     return {
       success: false,
       message: "An error occurred while creating the group. Please try again.",
@@ -50,12 +51,12 @@ export async function createGroup(
     email: emails[index],
   }));
 
-  const { data: createdParticipants, error: participantsError } = await supabase
+  const { data: createdParticipants, error: errorParticipants } = await supabase
     .from("participants")
     .insert(participants)
     .select();
 
-  if (participantsError) {
+  if (errorParticipants) {
     return {
       success: false,
       message:
@@ -65,18 +66,30 @@ export async function createGroup(
 
   const drawnParticipants = drawGroup(createdParticipants);
 
-  const { error: drawError } = await supabase
+  const { error: errorDraw } = await supabase
     .from("participants")
     .upsert(drawnParticipants);
 
-  if (drawError) {
+  if (errorDraw) {
     return {
       success: false,
       message: "An error occurred in the draw. Please try again.",
     };
   }
 
-  redirect(`secret-santa/groups/${newGroup.id}`);
+  const { error: errorResend } = await sendEmailToParticipants(
+    drawnParticipants,
+    groupName as string
+  );
+
+  if (errorResend) {
+    return {
+      success: false,
+      message: errorResend,
+    };
+  }
+
+  redirect(`/secret-santa/groups/${newGroup.id}`);
 }
 
 type Participant = {
@@ -88,6 +101,7 @@ type Participant = {
   created_at: string;
 };
 
+// TODO: Precisa ser melhor a logica do sorteio!!!
 function drawGroup(participants: Participant[]) {
   const selectedParticipants: string[] = [];
 
@@ -108,4 +122,31 @@ function drawGroup(participants: Participant[]) {
       assigned_to: assignedParticipant.id,
     };
   });
+}
+
+async function sendEmailToParticipants(
+  participants: Participant[],
+  groupName: string
+) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  try {
+    await Promise.all(
+      participants.map((participant) => {
+        resend.emails.send({
+          from: "Acme <onboarding@resend.dev>",
+          to: participant.email,
+          subject: `Secret friend draw - ${groupName}`,
+          // TODO: Dar um template!!!
+          html: `<p>You're taking part in the group's Secret Santa draw "${groupName}". <br /> <br />
+          Your secret friend is <strong>${participants.find((p) => p.id === participant.assigned_to)?.name}</strong>!</p>
+`,
+        });
+      })
+    );
+
+    return { error: null };
+  } catch {
+    return { error: "There was an error sending the emails." };
+  }
 }
