@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -12,8 +12,13 @@ import {
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Mail, Trash2 } from "lucide-react";
+import { Loader, Mail, Trash2 } from "lucide-react";
 import { Separator } from "./ui/separator";
+import {
+  createGroup,
+  CreateGroupState,
+} from "@/app/secret-santa/groups/new-group/actions";
+import { toast } from "sonner";
 
 interface Participant {
   name: string;
@@ -28,6 +33,14 @@ export default function NewGroupForm({
   const [participants, setParticipants] = useState<Participant[]>([
     { name: "", email: loggedUser.email },
   ]);
+
+  const [state, formAction, pending] = useActionState<
+    CreateGroupState,
+    FormData
+  >(createGroup, {
+    success: null,
+    message: "",
+  });
 
   const [groupName, setGroupName] = useState<string>("");
 
@@ -49,6 +62,12 @@ export default function NewGroupForm({
     setParticipants(participants.filter((_, i) => i !== index));
   }
 
+  useEffect(() => {
+    if (state.success === false) {
+      toast.error(state.message);
+    }
+  }, [state]);
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="text-center">
@@ -57,12 +76,13 @@ export default function NewGroupForm({
           Invite your friends to join your Secret Santa group!
         </CardDescription>
       </CardHeader>
-      <form action={() => {}}>
+      <form action={formAction}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="group-name">Group Name</Label>
             <Input
               id="group-name"
+              name="group-name"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               placeholder="Enter group name"
@@ -139,6 +159,7 @@ export default function NewGroupForm({
             className="flex items-center space-x-2 w-full md:w-auto"
           >
             <Mail className="w-3 h-3" /> Create the Group and send the emails!
+            {pending && <Loader className="animate-spin" />}
           </Button>
         </CardFooter>
       </form>
